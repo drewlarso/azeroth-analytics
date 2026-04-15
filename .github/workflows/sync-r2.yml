@@ -3,7 +3,7 @@ name: Sync Auctions to R2
 on:
     schedule:
         - cron: '20 * * * *'
-    workflow_dispatch:
+    # workflow_dispatch:
 
 jobs:
     fetch-auctions:
