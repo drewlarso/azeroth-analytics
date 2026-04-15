@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel
 import httpx
 import time
@@ -11,7 +12,7 @@ class RealmData(BaseModel):
 class AuctionData(BaseModel):
     auction_id: int
     item_id: int
-    unit_price: int
+    unit_price: Optional[int] = None
     quantity: int
     duration: str
 
@@ -71,6 +72,8 @@ class BlizzardClient:
         return realms
 
     def get_auctions(self, realm_id: int) -> list[AuctionData]:
+        time.sleep(0.75)
+
         token = self.get_token()
 
         url = f"https://{self.region}.api.blizzard.com/data/wow/connected-realm/{realm_id}/auctions"
@@ -86,13 +89,23 @@ class BlizzardClient:
         auctions: list[AuctionData] = []
 
         for auction in auction_data["auctions"]:
+            auction_id = auction.get("id")
+            item_id = auction.get("item").get("id")
+            unit_price = auction.get("buyout")
+            quantity = auction.get("quantity")
+            duration = auction.get("time_left")
+
+            # Skip bid-only and other invalid rows
+            if not all([auction_id, item_id, unit_price, quantity, duration]):
+                continue
+
             auctions.append(
                 AuctionData(
-                    auction_id=auction.get("id"),
-                    item_id=auction.get("item").get("id"),
-                    unit_price=auction.get("buyout"),
-                    quantity=auction.get("quantity"),
-                    duration=auction.get("time_left"),
+                    auction_id=int(auction_id),
+                    item_id=int(item_id),
+                    unit_price=int(unit_price),
+                    quantity=int(quantity),
+                    duration=duration,
                 )
             )
 
@@ -114,13 +127,22 @@ class BlizzardClient:
         auctions: list[AuctionData] = []
 
         for auction in auction_data["auctions"]:
+            auction_id = auction.get("id")
+            item_id = auction.get("item").get("id")
+            unit_price = auction.get("unit_price")
+            quantity = auction.get("quantity")
+            duration = auction.get("time_left")
+
+            if not all([auction_id, item_id, unit_price, quantity, duration]):
+                continue
+
             auctions.append(
                 AuctionData(
-                    auction_id=auction.get("id"),
-                    item_id=auction.get("item").get("id"),
-                    unit_price=auction.get("unit_price"),
-                    quantity=auction.get("quantity"),
-                    duration=auction.get("time_left"),
+                    auction_id=int(auction_id),
+                    item_id=int(item_id),
+                    unit_price=int(unit_price),
+                    quantity=int(quantity),
+                    duration=duration,
                 )
             )
 
