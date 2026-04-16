@@ -1,4 +1,4 @@
-from src.database.blizzard_client import BlizzardClient, AuctionData
+from api.client import BlizzardClient, AuctionData
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 import pandas as pd

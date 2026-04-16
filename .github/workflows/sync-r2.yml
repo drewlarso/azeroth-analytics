@@ -18,7 +18,7 @@ jobs:
                   enable-cache: true
 
             - name: Run fetch_auctions.py
-              run: uv run fetch_auctions.py
+              run: make fetch
               env:
                   BNET_CLIENT_ID: ${{ secrets.BNET_CLIENT_ID }}
                   BNET_CLIENT_SECRET: ${{ secrets.BNET_CLIENT_SECRET }}
