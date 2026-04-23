@@ -1,12 +1,14 @@
-from api.client import BlizzardClient, AuctionData
+from api.client import BlizzardClient, AuctionData, RealmData
 from datetime import datetime, timezone
 from dotenv import load_dotenv
+from httpx import AsyncClient
 import pandas as pd
+import asyncio
 import duckdb
 import os
 
 
-def write_commodities(
+async def write_commodities(
     con: duckdb.DuckDBPyConnection,
     bucket: str,
     auctions: list[AuctionData],
@@ -25,7 +27,7 @@ def write_commodities(
     )
 
 
-def write_auctions(
+async def write_auctions(
     con: duckdb.DuckDBPyConnection,
     bucket: str,
     auctions: list[AuctionData],
@@ -45,7 +47,29 @@ def write_auctions(
     )
 
 
-if __name__ == "__main__":
+async def process_realm_auctions(
+    bnet_client: BlizzardClient,
+    http_client: AsyncClient,
+    con: duckdb.DuckDBPyConnection,
+    bucket: str,
+    realm: RealmData,
+    region: str,
+    timestamp: datetime,
+    touched_ids: set[int],
+):
+    if realm.id in touched_ids:
+        return
+    touched_ids.add(realm.id)
+
+    try:
+        auctions = await bnet_client.get_auctions(http_client, realm.id)
+        await write_auctions(con, bucket, auctions, realm.id, region, timestamp)
+        print(f"Saved data for {realm.name} (id={realm.id}) - {len(auctions)} items")
+    except Exception as e:
+        print(f"Failed to process realm {realm.id}: {e}")
+
+
+async def main():
     load_dotenv()
 
     BNET_CLIENT_ID = os.getenv("BNET_CLIENT_ID") or ""
@@ -67,22 +91,36 @@ if __name__ == "__main__":
         con.execute("INSTALL httpfs; LOAD httpfs;")
         con.execute(f"SET s3_access_key_id='{R2_ID}';")
         con.execute(f"SET s3_secret_access_key='{R2_SECRET}';")
-
         endpoint = R2_URL.replace("https://", "")
         con.execute(f"SET s3_endpoint='{endpoint}';")
         con.execute("SET s3_region='auto';")
         con.execute("SET s3_url_style='path';")
 
-        commodities = client.get_commodities()
-        write_commodities(con, R2_BUCKET, commodities, BNET_REGION, timestamp)
+        async with AsyncClient(timeout=60.0) as http_client:
+            print("Fetching commodities...")
+            commodities = await client.get_commodities(http_client)
+            await write_commodities(con, R2_BUCKET, commodities, BNET_REGION, timestamp)
+            print(f"Saved commodities ({len(commodities)} items)")
 
-        realms = client.get_realms()
-        touched_realm_ids = set[int]()
+            realms = await client.get_realms(http_client)
+            touched_realm_ids = set()
 
-        for realm in realms:
-            if realm.id in touched_realm_ids:
-                continue
-            auctions = client.get_auctions(realm.id)
-            touched_realm_ids.add(realm.id)
-            write_auctions(con, R2_BUCKET, auctions, realm.id, BNET_REGION, timestamp)
-            print(f"saved data for {realm.name} (id={realm.id})")
+            tasks = [
+                process_realm_auctions(
+                    client,
+                    http_client,
+                    con,
+                    R2_BUCKET,
+                    realm,
+                    BNET_REGION,
+                    timestamp,
+                    touched_realm_ids,
+                )
+                for realm in realms
+            ]
+
+            await asyncio.gather(*tasks)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

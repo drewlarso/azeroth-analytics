@@ -16,3 +16,7 @@ data
 .uv-cache
 .duckdbrc
 .ruff_cache
+.vscode
+.tmp
+*.db
+*.tmp

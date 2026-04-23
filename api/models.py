@@ -13,3 +13,26 @@ class AuctionData(BaseModel):
     unit_price: Optional[int] = None
     quantity: int
     duration: str
+
+
+class ItemData(BaseModel):
+    id: int
+    name: str
+    item_class_id: int
+    item_subclass_id: int
+    stackable: bool
+    quality: Optional[str] = None
+    purchase_price: Optional[int] = None
+    sell_price: Optional[int] = None
+    media: Optional[int] = None
+
+
+class ItemClassData(BaseModel):
+    id: int
+    name: str
+
+
+class ItemSubclassData(BaseModel):
+    id: int
+    class_id: int
+    name: str
