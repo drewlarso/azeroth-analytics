@@ -1,17 +1,21 @@
 from textual.app import App, ComposeResult
-from textual.widgets import Label
+from textual.widgets import Header
+from api.database_manager import DatabaseManager
+import duckdb
 
 
 class AnalyticsApp(App):
-    CSS = """
-    Label {
-        width: 100%;
-        height: 100%;
-        content-align: center middle;
-    }
-    """
+    TITLE = "Azeroth Analytics"
+
+    def __init__(self):
+        super().__init__()
+        self.con = duckdb.connect("azeroth.db")
+        self.database = DatabaseManager(self.con)
 
     def compose(self) -> ComposeResult:
-        self.theme = "catppuccin-mocha"
+        self.theme = "rose-pine"
 
-        yield Label("Hello Azeroth!")
+        yield Header()
+
+    async def on_unmount(self) -> None:
+        self.con.close()

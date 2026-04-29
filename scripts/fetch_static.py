@@ -1,4 +1,4 @@
-from api.client import (
+from bnet.client import (
     BlizzardClient,
     ItemData,
     ItemClassData,

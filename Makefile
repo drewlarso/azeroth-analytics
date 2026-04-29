@@ -1,6 +1,6 @@
-.PHONY: fetch-auctions fetch-static pull database main
+.PHONY: fetch-auctions fetch-static pull database tui
 
-default: main
+default: tui
 
 fetch-auctions:
 	uv run python -m scripts.fetch_auctions
@@ -13,6 +13,7 @@ pull:
 
 database:
 	uv run python -m scripts.create_database
+	duckdb azeroth.db
 
-main:
+tui:
 	uv run python main.py

@@ -1,4 +1,4 @@
-from api.client import BlizzardClient, AuctionData, RealmData
+from bnet.client import BlizzardClient, AuctionData, RealmData
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 from httpx import AsyncClient

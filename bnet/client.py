@@ -1,7 +1,13 @@
 import asyncio
 from httpx import AsyncClient
 import time
-from api.models import AuctionData, RealmData, ItemData, ItemClassData, ItemSubclassData
+from bnet.models import (
+    AuctionData,
+    RealmData,
+    ItemData,
+    ItemClassData,
+    ItemSubclassData,
+)
 
 
 class BlizzardClient:
