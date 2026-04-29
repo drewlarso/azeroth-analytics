@@ -16,8 +16,17 @@ if __name__ == "__main__":
         "CREATE VIEW commodities AS SELECT * FROM read_parquet('data/commodities/**/*.parquet')"
     )
     con.execute(
-        "CREATE VIEW items AS SELECT * FROM read_parquet('data/static/items.parquet')"
+        "CREATE VIEW all_items AS SELECT * FROM read_parquet('data/static/items.parquet')"
     )
+    con.execute("""
+        CREATE TABLE items AS 
+        SELECT * FROM all_items
+        WHERE id IN (
+            SELECT item_id FROM auctions
+            UNION
+            SELECT item_id FROM commodities
+        )
+    """)
     con.execute(
         "CREATE VIEW classes AS SELECT * FROM read_parquet('data/static/item_classes.parquet')"
     )

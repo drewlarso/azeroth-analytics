@@ -1,0 +1,11 @@
+#sidebar {
+    width: 36;
+    height: 1fr;
+    align: center middle;
+    margin: 1 2;
+    scrollbar-size: 0 0;
+}
+
+.subclass-button {
+    width: 1fr;
+}
