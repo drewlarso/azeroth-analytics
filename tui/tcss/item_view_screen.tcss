@@ -1,0 +1,8 @@
+#item-view-container {
+    layout: grid;
+    grid-size: 16 16;
+    grid-gutter: 0;
+    width: 100%;
+    height: 100%;
+    margin: 1 1;
+}

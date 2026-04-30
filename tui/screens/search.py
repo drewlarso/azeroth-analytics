@@ -15,7 +15,7 @@ class SearchScreen(Screen):
     search_class = reactive(-1, init=False)
     search_subclass = reactive(-1, init=False)
     search_results: reactive[list[ItemData]] = reactive([], init=False)
-    selected_item = reactive(-1, init=False)
+    selected_item = reactive(83088, init=False)
 
     CSS_PATH = ["../tcss/search_screen.tcss"]
 
@@ -58,15 +58,26 @@ class SearchScreen(Screen):
             with VerticalScroll(id="results"):
                 pass
 
+    def watch_search_term(self, new_str: str) -> None:
+        self.query_one("#search-input", Input).value = new_str
+
     def watch_selected_item(self, id: int) -> None:
-        if id >= 0:
-            self.app.push_screen(ItemViewScreen(item_id=id))
+        if id >= 0 and self.realm >= 0:
+            commodity = (
+                self.db.con.execute(
+                    "SELECT 1 FROM commodity_items WHERE item_id = ? LIMIT 1", [id]
+                ).fetchone()
+                is not None
+            )
+            self.app.push_screen(ItemViewScreen(item_id=id, realm_id=self.realm, commodity=commodity))
+            self.selected_item = -1
 
     def update_search_results(self):
         self.search_results = self.db.search_items(
             self.search_term,
             self.search_class if self.search_class >= 0 else None,
             self.search_subclass if self.search_subclass >= 0 else None,
+            self.realm,
         )
 
         results = self.query_one("#results", VerticalScroll)
@@ -85,6 +96,7 @@ class SearchScreen(Screen):
             return
         realms = self.db.get_realms()
         self.realm = realms[str(event.value)]
+        self.update_search_results()
 
     @on(Input.Changed, "#search-input")
     def update_search(self, event: Input.Changed) -> None:

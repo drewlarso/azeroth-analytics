@@ -13,4 +13,5 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "textual>=8.2.3",
     "textual-dev>=1.8.0",
+    "textual-plotext>=1.0.1",
 ]

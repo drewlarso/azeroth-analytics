@@ -49,21 +49,44 @@ class DatabaseManager:
         search_term: str = "",
         item_class: int | None = None,
         item_subclass: int | None = None,
-    ):
-        query = "SELECT * FROM items WHERE 1=1"
-        params = []
+        realm_id: int | None = None,
+    ) -> list[ItemData]:
+        query = """
+            SELECT DISTINCT i.*
+            FROM items i
+            WHERE 1=1
+        """
+        params: list[int | str] = []
 
         if search_term:
-            query += " AND name ILIKE ?"
+            query += " AND i.name ILIKE ?"
             params.append(f"%{search_term}%")
 
         if item_class:
-            query += " AND item_class_id = ?"
+            query += " AND i.item_class_id = ?"
             params.append(item_class)
 
         if item_subclass:
-            query += " AND item_subclass_id = ?"
+            query += " AND i.item_subclass_id = ?"
             params.append(item_subclass)
+
+        if realm_id is None:
+            query += """
+                AND i.id IN (
+                    SELECT item_id FROM auction_items
+                    UNION
+                    SELECT item_id FROM commodity_items
+                )
+            """
+        else:
+            query += """
+                AND i.id IN (
+                    SELECT item_id FROM commodity_items
+                    UNION
+                    SELECT item_id FROM auction_items WHERE realm_id = ?
+                )
+            """
+            params.append(realm_id)
 
         query += " LIMIT 100;"
 
