@@ -1,8 +1,52 @@
 #item-view-container {
-    layout: grid;
-    grid-size: 16 16;
-    grid-gutter: 0;
     width: 100%;
-    height: 100%;
+    height: auto;
     margin: 1 1;
+}
+
+#back-button {
+    width: 10%;
+}
+
+#item-name {
+    width: auto;
+    height: 3;
+    color: $primary;
+    content-align: center middle;
+    margin: 0 4;
+}
+
+#classification {
+    width: auto;
+    height: 3;
+    color: $text-disabled;
+    content-align: center middle;
+    margin: 0 4;
+}
+
+#quality-label {
+    width: auto;
+    height: 3;
+    content-align: center middle;
+    margin: 0 4;
+}
+
+.spacer {
+    width: 1fr;
+}
+
+#vendor-price {
+    width: auto;
+    height: 3;
+    content-align: center middle;
+    margin: 0 4;
+    color: #ffc800;
+}
+
+#realm-label {
+    width: auto;
+    height: 3;
+    content-align: center middle;
+    margin: 0 4;
+    color: $text-secondary;
 }

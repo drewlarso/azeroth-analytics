@@ -36,3 +36,12 @@ class ItemSubclassData(BaseModel):
     id: int
     class_id: int
     name: str
+
+
+class ListingStats(BaseModel):
+    min_price: int | None
+    median_price: int | None
+    market_value: int | None
+    quantity_listed: int
+    auction_count: int
+    avg_stack: float

@@ -69,7 +69,11 @@ class SearchScreen(Screen):
                 ).fetchone()
                 is not None
             )
-            self.app.push_screen(ItemViewScreen(item_id=id, realm_id=self.realm, commodity=commodity))
+            self.app.push_screen(
+                ItemViewScreen(
+                    db=self.db, item_id=id, realm_id=self.realm, commodity=commodity
+                )
+            )
             self.selected_item = -1
 
     def update_search_results(self):
