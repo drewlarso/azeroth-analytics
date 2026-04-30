@@ -19,4 +19,6 @@ data
 .vscode
 .tmp
 *.db
+*.db.wal
 *.tmp
+.codex

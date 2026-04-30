@@ -3,6 +3,7 @@ from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.widgets import Label, Button
 from textual.containers import Horizontal, Vertical, Container
+from textual_plotext import PlotextPlot
 from api.database_manager import DatabaseManager
 
 
@@ -55,7 +56,7 @@ class ItemViewScreen(Screen):
         avg_stack = listings.avg_stack if listings else 0.0
 
         with Container(id="item-view-container"):
-            with Horizontal():
+            with Horizontal(id="topbar"):
                 yield Button("Back", id="back-button")
                 yield Label(self.item_data.name, id="item-name")
 
@@ -75,72 +76,84 @@ class ItemViewScreen(Screen):
                 yield Label("", classes="spacer")
 
                 yield Label("Vendor Price: 25g", id="vendor-price")
-                yield Label(realm_name, id="realm-label")
-
-            with Vertical(id="basic-stats"):
-                with Vertical(id="current-listings", classes="sidebar-section"):
-                    yield Label("Current Listings", classes="section-header")
-                    yield Label(
-                        f"min buyout    {self.format_price(min_price)}",
-                        classes="stat-row",
-                        id="stat-min-price",
-                    )
-                    yield Label(
-                        f"median        {self.format_price(median_price)}",
-                        classes="stat-row",
-                        id="stat-median-price",
-                    )
-                    yield Label(
-                        f"market value  {self.format_price(market_value)}",
-                        classes="stat-row",
-                        id="stat-market-value",
-                    )
-
-            with Vertical(id="availability", classes="sidebar-section"):
-                yield Label("Availability", classes="section-header")
                 yield Label(
-                    f"qty listed    {qty_listed}",
-                    classes="stat-row",
-                    id="stat-qty",
-                )
-                yield Label(
-                    f"auctions      {auction_count}",
-                    classes="stat-row",
-                    id="stat-auctions",
-                )
-                yield Label(
-                    f"avg stack     {avg_stack:.1f}",
-                    classes="stat-row",
-                    id="stat-avg-stack",
-                )
-                yield Label(
-                    f"stackable     {'yes' if self.item_data.stackable else 'no'}",
-                    classes="stat-row",
-                    id="stat-stackable",
+                    "Commodity" if self.commodity else realm_name, id="realm-label"
                 )
 
-            with Vertical(id="duration-split", classes="sidebar-section"):
-                yield Label("Duration Split", classes="section-header")
-                yield Label(
-                    f"short         {duration_counts.get('short', 0)}",
-                    classes="stat-row",
-                    id="stat-dur-short",
-                )
-                yield Label(
-                    f"medium        {duration_counts.get('medium', 0)}",
-                    classes="stat-row",
-                    id="stat-dur-medium",
-                )
-                yield Label(
-                    f"long          {duration_counts.get('long', 0)}",
-                    classes="stat-row",
-                    id="stat-dur-long",
-                )
-                yield Label(
-                    f"very long     {duration_counts.get('very_long', 0)}",
-                    classes="stat-row",
-                    id="stat-dur-very-long",
-                )
+            with Horizontal(id="main-content"):
+                with Vertical(id="sidebar"):
+                    with Vertical(id="current-listings", classes="sidebar-section"):
+                        yield Label("Current Listings", classes="section-header")
+                        yield Label(
+                            f"min buyout    {self.format_price(min_price)}",
+                            classes="stat-row",
+                            id="stat-min-price",
+                        )
+                        yield Label(
+                            f"median        {self.format_price(median_price)}",
+                            classes="stat-row",
+                            id="stat-median-price",
+                        )
+                        yield Label(
+                            f"market value  {self.format_price(market_value)}",
+                            classes="stat-row",
+                            id="stat-market-value",
+                        )
+
+                    with Vertical(id="availability", classes="sidebar-section"):
+                        yield Label("Availability", classes="section-header")
+                        yield Label(
+                            f"qty listed    {qty_listed}",
+                            classes="stat-row",
+                            id="stat-qty",
+                        )
+                        yield Label(
+                            f"auctions      {auction_count}",
+                            classes="stat-row",
+                            id="stat-auctions",
+                        )
+                        yield Label(
+                            f"avg stack     {avg_stack:.1f}",
+                            classes="stat-row",
+                            id="stat-avg-stack",
+                        )
+                        yield Label(
+                            f"stackable     {'yes' if self.item_data.stackable else 'no'}",
+                            classes="stat-row",
+                            id="stat-stackable",
+                        )
+
+                    with Vertical(id="duration-split", classes="sidebar-section"):
+                        yield Label("Duration Split", classes="section-header")
+                        yield Label(
+                            f"short         {duration_counts.get('short', 0)}",
+                            classes="stat-row",
+                            id="stat-dur-short",
+                        )
+                        yield Label(
+                            f"medium        {duration_counts.get('medium', 0)}",
+                            classes="stat-row",
+                            id="stat-dur-medium",
+                        )
+                        yield Label(
+                            f"long          {duration_counts.get('long', 0)}",
+                            classes="stat-row",
+                            id="stat-dur-long",
+                        )
+                        yield Label(
+                            f"very long     {duration_counts.get('very_long', 0)}",
+                            classes="stat-row",
+                            id="stat-dur-very-long",
+                        )
+
+                with Container(id="charts"):
+                    yield PlotextPlot()
+
+    def on_mount(self) -> None:
+        data = [1, 2, 3]
+        plt = self.query_one(PlotextPlot).plt
+        plt.bar(data)
+        plt.title("Prices")
 
     @on(Button.Pressed, "#back-button")
     def close_screen(self) -> None:

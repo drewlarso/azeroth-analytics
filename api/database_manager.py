@@ -91,10 +91,8 @@ class DatabaseManager:
                     SUM(quantity) AS quantity_listed,
                     COUNT(*) AS auction_count,
                     AVG(quantity) AS average_stack
-                FROM commodities
+                FROM recent_commodities
                 WHERE item_id = ?
-                    AND MAKE_TIMESTAMP(year::INT, month::INT, day::INT, hour::INT, 0, 0)
-                        >= NOW() - INTERVAL '24 hours'
                 """,
                 [item_id],
             ).fetchone()
@@ -108,11 +106,9 @@ class DatabaseManager:
                     SUM(quantity) AS quantity_listed,
                     COUNT(*) AS auction_count,
                     AVG(quantity) AS average_stack
-                FROM auctions
+                FROM recent_auctions
                 WHERE item_id = ?
                     AND realm = ?
-                    AND MAKE_TIMESTAMP(year::INT, month::INT, day::INT, hour::INT, 0, 0)
-                        >= NOW() - INTERVAL '24 hours'
                 """,
                 [item_id, realm_id],
             ).fetchone()
@@ -136,10 +132,8 @@ class DatabaseManager:
             rows = self.con.execute(
                 """
                 SELECT duration, COUNT(*) AS count
-                FROM commodities
+                FROM recent_commodities
                 WHERE item_id = ?
-                AND MAKE_TIMESTAMP(year::INT, month::INT, day::INT, hour::INT, 0, 0)
-                    >= NOW() - INTERVAL '24 hours'
                 GROUP BY duration
                 """,
                 [item_id],
@@ -148,17 +142,20 @@ class DatabaseManager:
             rows = self.con.execute(
                 """
                 SELECT duration, COUNT(*) AS count
-                FROM auctions
+                FROM recent_auctions
                 WHERE item_id = ?
                 AND realm = ?
-                AND MAKE_TIMESTAMP(year::INT, month::INT, day::INT, hour::INT, 0, 0)
-                    >= NOW() - INTERVAL '24 hours'
                 GROUP BY duration
                 """,
                 [item_id, realm_id],
             ).fetchall()
 
         return {duration.lower(): count for duration, count in rows}
+
+    def get_price_history(
+        self, item_id: int, realm_id: int, commodity: bool = False
+    ) -> list[tuple[str, int]]:
+        return []
 
     def search_items(
         self,
