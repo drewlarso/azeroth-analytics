@@ -1,0 +1,78 @@
+#search-screen-container {
+    layout: grid;
+    grid-size: 16 16;
+    grid-gutter: 0;
+    width: 100%;
+    height: 100%;
+    margin: 1 1;
+}
+
+#realm-selector {
+    width: 100%;
+    column-span: 3;
+    row-span: 1;
+    margin: 0;
+}
+
+#search-input {
+    width: 100%;
+    column-span: 13;
+    row-span: 1;
+}
+
+#sidebar {
+    width: 100%;
+    height: 100%;
+    column-span: 3;
+    row-span: 15;
+    margin: 1;
+    align-vertical: top;
+}
+
+.class-dropdown {
+    width: 100%;
+    margin: 0;
+    border: none;
+    background: transparent;
+}
+
+.subclass-button {
+    width: 1fr;
+    height: 1;
+    margin: 1 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: $text-secondary;
+}
+
+.class-dropdown > CollapsibleTitle {
+    padding: 0 1;
+    background: transparent;
+}
+
+.class-dropdown > CollapsibleTitle:hover {
+    color: $secondary;
+}
+
+Collapsible > Contents {
+    margin: 0;
+    padding: 1 0;
+}
+
+.subclass-button:hover {
+    color: $primary;
+}
+
+#results {
+    width: 100%;
+    height: 100%;
+    column-span: 13;
+    row-span: 15;
+    margin: 1;
+}
+
+.result-item {
+    width: 100%;
+    height: 3;
+}
