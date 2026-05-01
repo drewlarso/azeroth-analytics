@@ -89,3 +89,7 @@
     width: 1fr;
     height: 1fr;
 }
+
+PlotextPlot {
+    margin: 1 1;
+}

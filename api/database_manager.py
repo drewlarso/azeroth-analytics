@@ -89,7 +89,7 @@ class DatabaseManager:
                     MEDIAN(unit_price) AS median_price,
                     PERCENTILE_CONT(0.15) WITHIN GROUP (ORDER BY unit_price) AS market_value,
                     SUM(quantity) AS quantity_listed,
-                    COUNT(*) AS auction_count,
+                    COUNT(DISTINCT auction_id) AS auction_count,
                     AVG(quantity) AS average_stack
                 FROM recent_commodities
                 WHERE item_id = ?
@@ -104,7 +104,7 @@ class DatabaseManager:
                     MEDIAN(unit_price) AS median_price,
                     PERCENTILE_CONT(0.15) WITHIN GROUP (ORDER BY unit_price) AS market_value,
                     SUM(quantity) AS quantity_listed,
-                    COUNT(*) AS auction_count,
+                    COUNT(DISTINCT auction_id) AS auction_count,
                     AVG(quantity) AS average_stack
                 FROM recent_auctions
                 WHERE item_id = ?
@@ -155,7 +155,121 @@ class DatabaseManager:
     def get_price_history(
         self, item_id: int, realm_id: int, commodity: bool = False
     ) -> list[tuple[str, int]]:
-        return []
+        if commodity:
+            rows = self.con.execute(
+                """
+                SELECT
+                    TIME_BUCKET(
+                        INTERVAL '24 hours',
+                        MAKE_TIMESTAMP(year::INT, month::INT, day::INT, hour::INT, 0, 0)
+                    ) AS ts,
+                    MIN(unit_price)
+                FROM commodities
+                WHERE item_id = ?
+                GROUP BY ts
+                ORDER BY ts
+                """,
+                [item_id],
+            )
+        else:
+            rows = self.con.execute(
+                f"""
+                SELECT
+                    TIME_BUCKET(
+                        INTERVAL '24 hours',
+                        MAKE_TIMESTAMP(year::INT, month::INT, day::INT, hour::INT, 0, 0)
+                    ) AS ts,
+                    MIN(unit_price)
+                FROM read_parquet('data/auctions/region=us/realm={realm_id}/**/*.parquet')
+                WHERE item_id = ?
+                GROUP BY ts
+                ORDER BY ts
+                """,
+                [item_id],
+            )
+
+        return [(str(timestamp), price) for timestamp, price in rows.fetchall()]
+
+    def get_price_by_hour(self, item_id: int) -> list[tuple[int, float]]:
+        rows = self.con.execute(
+            """
+            SELECT hour::INT AS hour, MIN(unit_price) AS min_price
+            FROM commodities
+            WHERE item_id = ?
+            GROUP BY hour
+            ORDER BY hour
+            """,
+            [item_id],
+        ).fetchall()
+        return [(int(row[0]), float(row[1])) for row in rows]
+
+    def get_price_by_dow(self, item_id: int) -> list[tuple[int, float]]:
+        rows = self.con.execute(
+            """
+            SELECT
+                DAYOFWEEK(MAKE_TIMESTAMP(year::INT, month::INT, day::INT, hour::INT, 0, 0)) AS dow,
+                MIN(unit_price) AS min_price
+            FROM commodities
+            WHERE item_id = ?
+            GROUP BY dow
+            ORDER BY dow
+            """,
+            [item_id],
+        ).fetchall()
+        return [(int(row[0]), float(row[1])) for row in rows]
+
+    def get_price_histogram(
+        self, item_id: int, realm_id: int, commodity: bool = False
+    ) -> list:
+        if commodity:
+            row = self.con.execute(
+                """
+                SELECT histogram(unit_price)
+                FROM (
+                    SELECT unit_price
+                    FROM recent_commodities
+                    WHERE item_id = ?
+                    GROUP BY auction_id, unit_price
+                )
+                """,
+                [item_id],
+            ).fetchone()
+        else:
+            row = self.con.execute(
+                """
+                SELECT histogram(unit_price)
+                FROM (
+                    SELECT unit_price
+                    FROM recent_auctions
+                    WHERE item_id = ?
+                        AND realm = ?
+                    GROUP BY auction_id, unit_price
+                )
+                """,
+                [item_id, realm_id],
+            ).fetchone()
+
+        if row is None or row[0] is None:
+            return []
+
+        hist = row[0]
+        return sorted(hist.items())
+
+    def get_price_on_each_realm(self, item_id: int) -> list[tuple[str, int]]:
+        rows = self.con.execute(
+            """
+            SELECT DISTINCT realms.name, MIN(unit_price) as price
+            FROM recent_auctions
+            JOIN realms
+                ON realms.id = recent_auctions.realm
+            WHERE item_id = ?
+            GROUP BY realms.name
+            ORDER BY price, realms.name
+            """,
+            [item_id],
+        )
+
+        return [(realm, price) for realm, price in rows.fetchall()]
 
     def search_items(
         self,
@@ -201,7 +315,7 @@ class DatabaseManager:
             """
             params.append(realm_id)
 
-        query += " LIMIT 100;"
+        query += " ORDER BY i.name LIMIT 100;"
 
         items = self.con.execute(query, params).df().to_dict("records")
         return [ItemData(**item) for item in items]  # type: ignore

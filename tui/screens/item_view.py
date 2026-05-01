@@ -4,6 +4,7 @@ from textual.screen import Screen
 from textual.widgets import Label, Button
 from textual.containers import Horizontal, Vertical, Container
 from textual_plotext import PlotextPlot
+from datetime import datetime, timedelta
 from api.database_manager import DatabaseManager
 
 
@@ -75,7 +76,10 @@ class ItemViewScreen(Screen):
 
                 yield Label("", classes="spacer")
 
-                yield Label("Vendor Price: 25g", id="vendor-price")
+                yield Label(
+                    f"Vendor Price: {self.format_price(self.item_data.sell_price)}",
+                    id="vendor-price",
+                )
                 yield Label(
                     "Commodity" if self.commodity else realm_name, id="realm-label"
                 )
@@ -147,13 +151,183 @@ class ItemViewScreen(Screen):
                         )
 
                 with Container(id="charts"):
-                    yield PlotextPlot()
+                    with Vertical():
+                        with Horizontal(id="top-charts"):
+                            yield PlotextPlot(id="price-history")
+                            yield PlotextPlot(id="price-histogram")
+                        with Horizontal(id="bottom-charts"):
+                            if not self.commodity:
+                                yield PlotextPlot(id="cheapest-realms")
+                                yield PlotextPlot(id="expensive-realms")
+                            else:
+                                yield PlotextPlot(id="price-per-day")
+                                yield PlotextPlot(id="price-hourly")
 
     def on_mount(self) -> None:
-        data = [1, 2, 3]
-        plt = self.query_one(PlotextPlot).plt
-        plt.bar(data)
-        plt.title("Prices")
+        realm_prices = self.db.get_price_on_each_realm(self.item_id)
+
+        self.create_price_history_plot()
+        self.create_price_histogram()
+
+        if self.commodity:
+            self.create_price_by_hour_plot()
+            self.create_price_by_dow_plot()
+        else:
+            max_lines = 25
+            self.create_cheapest_realms_plot(realm_prices[:max_lines])
+            self.create_expensive_realms_plot(realm_prices[::-1][:max_lines])
+
+    def create_price_history_plot(self) -> None:
+        data = self.db.get_price_history(self.item_id, self.realm_id, self.commodity)
+        if not data:
+            return
+
+        cutoff = datetime.now() - timedelta(weeks=2)
+        data = [(datetime.fromisoformat(ts), price) for ts, price in data]
+        data = [(ts, price) for ts, price in data if ts >= cutoff]
+        if not data:
+            return
+
+        time = [ts.strftime("%d/%m/%Y") for ts, _ in data]
+        price = [price for _, price in data]
+
+        plt = self.query_one("#price-history", PlotextPlot).plt
+        plt.plot(time, price)
+        plt.title("Price History")
+        max_price = max(price) if price else 0
+        upper_limit = max_price * 1.05 if max_price > 0 else 1
+        plt.ylim(0, upper_limit)
+        plt.yfrequency(5)
+        step = upper_limit / 5
+        plt.yticks(
+            [i * step for i in range(6)],
+            [self.format_price(int(i * step)) for i in range(6)],
+        )
+        plt.canvas_color("none")
+        plt.axes_color("none")
+        plt.date_form("m/d/Y")
+
+    def create_price_histogram(self) -> None:
+        data = self.db.get_price_histogram(self.item_id, self.realm_id, self.commodity)
+        if not data:
+            return
+
+        buckets = [self.format_price(floor) for floor, _ in data]
+        counts = [count for _, count in data]
+
+        plt = self.query_one("#price-histogram", PlotextPlot).plt
+        plt.bar(buckets, counts)
+        plt.title("Price Distribution")
+        plt.canvas_color("none")
+        plt.axes_color("none")
+        max_count = max(counts) if counts else 1
+        plt.ylim(0, max_count * 1.1)
+
+    def create_price_by_hour_plot(self) -> None:
+        data = self.db.get_price_by_hour(self.item_id)
+        if not data:
+            return
+
+        hour_labels = {
+            0: "12am",
+            1: "1am",
+            2: "2am",
+            3: "3am",
+            4: "4am",
+            5: "5am",
+            6: "6am",
+            7: "7am",
+            8: "8am",
+            9: "9am",
+            10: "10am",
+            11: "11am",
+            12: "12pm",
+            13: "1pm",
+            14: "2pm",
+            15: "3pm",
+            16: "4pm",
+            17: "5pm",
+            18: "6pm",
+            19: "7pm",
+            20: "8pm",
+            21: "9pm",
+            22: "10pm",
+            23: "11pm",
+        }
+
+        labels = [hour_labels[hour] for hour, _ in data]
+        prices = [price for _, price in data]
+
+        plt = self.query_one("#price-hourly", PlotextPlot).plt
+        plt.bar(labels, prices, orientation="horizontal")
+        plt.title("Min Price by Hour")
+        plt.canvas_color("none")
+        plt.axes_color("none")
+        plt.xlim(0, max(prices) * 1.1)
+        step = max(prices) / 5
+        plt.xticks(
+            [i * step for i in range(6)],
+            [self.format_price(int(i * step)) for i in range(6)],
+        )
+
+    def create_price_by_dow_plot(self) -> None:
+        data = self.db.get_price_by_dow(self.item_id)
+        if not data:
+            return
+
+        days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        labels = [days[dow] for dow, _ in data]
+        prices = [price for _, price in data]
+
+        plt = self.query_one("#price-per-day", PlotextPlot).plt
+        plt.bar(labels, prices, orientation="horizontal")
+        plt.title("Min Price by Day")
+        plt.canvas_color("none")
+        plt.axes_color("none")
+        plt.xlim(0, max(prices) * 1.1)
+        step = max(prices) / 5
+        plt.xticks(
+            [i * step for i in range(6)],
+            [self.format_price(int(i * step)) for i in range(6)],
+        )
+
+    def create_cheapest_realms_plot(self, data: list[tuple[str, int]]) -> None:
+        if not data:
+            return
+        data = data[::-1]
+
+        realms = [realm for realm, _ in data]
+        prices = [price for _, price in data]
+
+        plt = self.query_one("#cheapest-realms", PlotextPlot).plt
+        plt.bar(realms, prices, orientation="horizontal", width=0.5)
+        plt.title("Cheapest Realms")
+        plt.xlim(0, max(prices) * 1.1)
+        plt.xticks(
+            [i * max(prices) / 5 for i in range(6)],
+            [self.format_price(int(i * max(prices) / 5)) for i in range(6)],
+        )
+        plt.canvas_color("none")
+        plt.axes_color("none")
+
+    def create_expensive_realms_plot(self, data: list[tuple[str, int]]) -> None:
+        if not data:
+            return
+        data = data[::-1]
+
+        realms = [realm for realm, _ in data]
+        prices = [price for _, price in data]
+
+        plt = self.query_one("#expensive-realms", PlotextPlot).plt
+        plt.bar(realms, prices, orientation="horizontal")
+        plt.title("Most Expensive Realms")
+        plt.xlim(0, max(prices) * 1.1)
+        plt.xticks(
+            [i * max(prices) / 5 for i in range(6)],
+            [self.format_price(int(i * max(prices) / 5)) for i in range(6)],
+        )
+        plt.canvas_color("none")
+        plt.axes_color("none")
 
     @on(Button.Pressed, "#back-button")
     def close_screen(self) -> None:
@@ -169,9 +343,13 @@ class ItemViewScreen(Screen):
 
         parts = []
         if gold:
-            parts.append(f"{gold}g")
-        if silver:
+            parts.append(f"{gold:,}g")
+        if silver and gold < 10:
             parts.append(f"{silver}s")
-        if copper_remaining or not parts:
+        if copper_remaining and gold < 10 and silver < 10:
             parts.append(f"{copper_remaining}c")
+
+        if not parts:
+            parts.append(f"{copper_remaining}c")
+
         return " ".join(parts)
