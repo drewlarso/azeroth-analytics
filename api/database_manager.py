@@ -194,7 +194,7 @@ class DatabaseManager:
     def get_price_by_hour(self, item_id: int) -> list[tuple[int, float]]:
         rows = self.con.execute(
             """
-            SELECT hour::INT AS hour, MIN(unit_price) AS min_price
+            SELECT hour::INT AS hour, MEDIAN(unit_price) AS median_price
             FROM commodities
             WHERE item_id = ?
             GROUP BY hour
@@ -209,7 +209,7 @@ class DatabaseManager:
             """
             SELECT
                 DAYOFWEEK(MAKE_TIMESTAMP(year::INT, month::INT, day::INT, hour::INT, 0, 0)) AS dow,
-                MIN(unit_price) AS min_price
+                MEDIAN(unit_price) AS median_price
             FROM commodities
             WHERE item_id = ?
             GROUP BY dow
