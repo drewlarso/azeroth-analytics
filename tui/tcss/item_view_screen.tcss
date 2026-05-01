@@ -92,4 +92,98 @@
 
 PlotextPlot {
     margin: 1 1;
+}#item-view-container {
+    width: 100%;
+    height: 100%;
+    margin: 1 1;
+}
+
+#topbar {
+    height: 3;
+    width: 100%;
+}
+
+#back-button {
+    width: 10%;
+    margin-left: 2;
+}
+
+#item-name {
+    width: auto;
+    height: 3;
+    color: $primary;
+    content-align: center middle;
+    margin: 0 4;
+}
+
+#classification {
+    width: auto;
+    height: 3;
+    color: $text-disabled;
+    content-align: center middle;
+    margin: 0 4;
+}
+
+#quality-label {
+    width: auto;
+    height: 3;
+    content-align: center middle;
+    margin: 0 4;
+}
+
+.spacer {
+    width: 1fr;
+}
+
+#vendor-price {
+    width: auto;
+    height: 3;
+    content-align: center middle;
+    margin: 0 4;
+    color: #ffc800;
+}
+
+#realm-label {
+    width: auto;
+    height: 3;
+    content-align: center middle;
+    margin: 0 4;
+    color: $text-secondary;
+}
+
+#main-content {
+    width: 100%;
+    height: 1fr;
+}
+
+#sidebar {
+    width: 36;
+    height: 100%;
+    align: left top;
+}
+
+.sidebar-section {
+    width: 1fr;
+    height: auto;
+    margin: 1 0;
+    border: tall $panel;
+    padding: 0 1;
+}
+
+.section-header {
+    color: #7bdff2;
+    margin-bottom: 1;
+}
+
+.stat-row {
+    color: $text;
+}
+
+#charts {
+    width: 1fr;
+    height: 1fr;
+}
+
+PlotextPlot {
+    margin: 1 1;
 }

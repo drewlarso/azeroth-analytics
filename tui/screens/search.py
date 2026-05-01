@@ -11,7 +11,7 @@ from .item_view import ItemViewScreen
 
 class SearchScreen(Screen):
     realm = reactive(-1, init=False)
-    search_term = reactive("panther", init=False)
+    search_term = reactive("", init=False)
     search_class = reactive(-1, init=False)
     search_subclass = reactive(-1, init=False)
     search_results: reactive[list[ItemData]] = reactive([], init=False)

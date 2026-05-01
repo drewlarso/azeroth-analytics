@@ -104,11 +104,12 @@ class DatabaseManager:
                     MEDIAN(unit_price) AS median_price,
                     PERCENTILE_CONT(0.15) WITHIN GROUP (ORDER BY unit_price) AS market_value,
                     SUM(quantity) AS quantity_listed,
-                    COUNT(DISTINCT auction_id) AS auction_count,
+                    COUNT(auction_id) AS auction_count,
                     AVG(quantity) AS average_stack
                 FROM recent_auctions
                 WHERE item_id = ?
                     AND realm = ?
+                GROUP BY auction_id
                 """,
                 [item_id, realm_id],
             ).fetchone()

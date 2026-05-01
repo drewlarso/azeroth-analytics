@@ -1,7 +1,6 @@
 from textual.app import App
 from api.database_manager import DatabaseManager
 from .screens.search import SearchScreen
-from .screens.item_view import ItemViewScreen
 import duckdb
 
 
@@ -18,4 +17,3 @@ class AnalyticsApp(App):
         self.theme = "tokyo-night"
         search_screen = SearchScreen(db=self.database)
         self.push_screen(search_screen)
-        self.push_screen(ItemViewScreen(db=self.database, item_id=83088, realm_id=60))

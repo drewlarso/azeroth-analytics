@@ -49,12 +49,14 @@ class ItemViewScreen(Screen):
             self.item_id, self.realm_id, commodity=self.commodity
         )
 
-        min_price = listings.min_price if listings else None
-        median_price = listings.median_price if listings else None
-        market_value = listings.market_value if listings else None
+        min_price = listings.min_price if listings else 0
+        median_price = listings.median_price if listings else 0
+        market_value = listings.market_value if listings else 0
         qty_listed = listings.quantity_listed if listings else 0
         auction_count = listings.auction_count if listings else 0
         avg_stack = listings.avg_stack if listings else 0.0
+
+        realm_prices = self.db.get_price_on_each_realm(self.item_id)
 
         with Container(id="item-view-container"):
             with Horizontal(id="topbar"):
@@ -77,10 +79,6 @@ class ItemViewScreen(Screen):
                 yield Label("", classes="spacer")
 
                 yield Label(
-                    f"Vendor Price: {self.format_price(self.item_data.sell_price)}",
-                    id="vendor-price",
-                )
-                yield Label(
                     "Commodity" if self.commodity else realm_name, id="realm-label"
                 )
 
@@ -91,17 +89,14 @@ class ItemViewScreen(Screen):
                         yield Label(
                             f"min buyout    {self.format_price(min_price)}",
                             classes="stat-row",
-                            id="stat-min-price",
                         )
                         yield Label(
                             f"median        {self.format_price(median_price)}",
                             classes="stat-row",
-                            id="stat-median-price",
                         )
                         yield Label(
                             f"market value  {self.format_price(market_value)}",
                             classes="stat-row",
-                            id="stat-market-value",
                         )
 
                     with Vertical(id="availability", classes="sidebar-section"):
@@ -109,22 +104,18 @@ class ItemViewScreen(Screen):
                         yield Label(
                             f"qty listed    {qty_listed}",
                             classes="stat-row",
-                            id="stat-qty",
                         )
                         yield Label(
                             f"auctions      {auction_count}",
                             classes="stat-row",
-                            id="stat-auctions",
                         )
                         yield Label(
                             f"avg stack     {avg_stack:.1f}",
                             classes="stat-row",
-                            id="stat-avg-stack",
                         )
                         yield Label(
                             f"stackable     {'yes' if self.item_data.stackable else 'no'}",
                             classes="stat-row",
-                            id="stat-stackable",
                         )
 
                     with Vertical(id="duration-split", classes="sidebar-section"):
@@ -132,23 +123,45 @@ class ItemViewScreen(Screen):
                         yield Label(
                             f"short         {duration_counts.get('short', 0)}",
                             classes="stat-row",
-                            id="stat-dur-short",
                         )
                         yield Label(
                             f"medium        {duration_counts.get('medium', 0)}",
                             classes="stat-row",
-                            id="stat-dur-medium",
                         )
                         yield Label(
                             f"long          {duration_counts.get('long', 0)}",
                             classes="stat-row",
-                            id="stat-dur-long",
                         )
                         yield Label(
                             f"very long     {duration_counts.get('very_long', 0)}",
                             classes="stat-row",
-                            id="stat-dur-very-long",
                         )
+
+                    with Vertical(id="comparisons", classes="sidebar-section"):
+                        vendor_price = self.item_data.sell_price or 1
+                        cost = min_price or 1
+                        profit_percent = ((vendor_price - cost) / cost) * 100
+                        yield Label(
+                            f"vendor price    {self.format_price(self.item_data.sell_price)}",
+                            classes="stat-row",
+                        )
+                        yield Label(
+                            f"vendor profit   {profit_percent:.2f}%",
+                            classes="stat-row",
+                        )
+                        yield Label(
+                            f"market cap      {self.format_price(int(qty_listed * avg_stack * (median_price or 0)))}",
+                            classes="stat-row",
+                        )
+                        if not self.commodity:
+                            yield Label(
+                                f"highest realm   {realm_prices[-1][0]}",
+                                classes="stat-row",
+                            )
+                            yield Label(
+                                f"lowest realm    {realm_prices[0][0]}",
+                                classes="stat-row",
+                            )
 
                 with Container(id="charts"):
                     with Vertical():
@@ -201,7 +214,7 @@ class ItemViewScreen(Screen):
         step = upper_limit / 5
         plt.yticks(
             [i * step for i in range(6)],
-            [self.format_price(int(i * step)) for i in range(6)],
+            [self.format_price_plain(int(i * step)) for i in range(6)],
         )
         plt.canvas_color("none")
         plt.axes_color("none")
@@ -212,7 +225,7 @@ class ItemViewScreen(Screen):
         if not data:
             return
 
-        buckets = [self.format_price(floor) for floor, _ in data]
+        buckets = [self.format_price_plain(floor) for floor, _ in data]
         counts = [count for _, count in data]
 
         plt = self.query_one("#price-histogram", PlotextPlot).plt
@@ -267,7 +280,7 @@ class ItemViewScreen(Screen):
         step = max(prices) / 5
         plt.xticks(
             [i * step for i in range(6)],
-            [self.format_price(int(i * step)) for i in range(6)],
+            [self.format_price_plain(int(i * step)) for i in range(6)],
         )
 
     def create_price_by_dow_plot(self) -> None:
@@ -288,7 +301,7 @@ class ItemViewScreen(Screen):
         step = max(prices) / 5
         plt.xticks(
             [i * step for i in range(6)],
-            [self.format_price(int(i * step)) for i in range(6)],
+            [self.format_price_plain(int(i * step)) for i in range(6)],
         )
 
     def create_cheapest_realms_plot(self, data: list[tuple[str, int]]) -> None:
@@ -305,7 +318,7 @@ class ItemViewScreen(Screen):
         plt.xlim(0, max(prices) * 1.1)
         plt.xticks(
             [i * max(prices) / 5 for i in range(6)],
-            [self.format_price(int(i * max(prices) / 5)) for i in range(6)],
+            [self.format_price_plain(int(i * max(prices) / 5)) for i in range(6)],
         )
         plt.canvas_color("none")
         plt.axes_color("none")
@@ -324,7 +337,7 @@ class ItemViewScreen(Screen):
         plt.xlim(0, max(prices) * 1.1)
         plt.xticks(
             [i * max(prices) / 5 for i in range(6)],
-            [self.format_price(int(i * max(prices) / 5)) for i in range(6)],
+            [self.format_price_plain(int(i * max(prices) / 5)) for i in range(6)],
         )
         plt.canvas_color("none")
         plt.axes_color("none")
@@ -333,14 +346,12 @@ class ItemViewScreen(Screen):
     def close_screen(self) -> None:
         self.app.pop_screen()
 
-    def format_price(self, copper: int | None) -> str:
+    def format_price_plain(self, copper: int | None) -> str:
         if copper is None:
             return "---"
-
         gold = copper // 10000
         silver = (copper % 10000) // 100
         copper_remaining = copper % 100
-
         parts = []
         if gold:
             parts.append(f"{gold:,}g")
@@ -348,8 +359,27 @@ class ItemViewScreen(Screen):
             parts.append(f"{silver}s")
         if copper_remaining and gold < 10 and silver < 10:
             parts.append(f"{copper_remaining}c")
-
         if not parts:
             parts.append(f"{copper_remaining}c")
+        return " ".join(parts)
 
+    def format_price(self, copper: int | None) -> str:
+        if copper is None:
+            return "---"
+        GOLD = "[#FFD700]"
+        SILVER = "[#ADB9E3]"
+        COPPER = "[#FF8C58]"
+        CLOSE = "[/]"
+        gold = copper // 10000
+        silver = (copper % 10000) // 100
+        copper_remaining = copper % 100
+        parts = []
+        if gold:
+            parts.append(f"{GOLD}{gold:,}g{CLOSE}")
+        if silver and gold < 10:
+            parts.append(f"{SILVER}{silver}s{CLOSE}")
+        if copper_remaining and gold < 10 and silver < 10:
+            parts.append(f"{COPPER}{copper_remaining}c{CLOSE}")
+        if not parts:
+            parts.append(f"{COPPER}{copper_remaining}c{CLOSE}")
         return " ".join(parts)
